@@ -13,7 +13,7 @@ def setup_logging(args) -> str:
     
     # Create log filename based on init time and arguments
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_filename = os.path.join(
+    log_path = os.path.join(
         args.logs_directory, 
         f"{timestamp}_{args.base_asset}{args.initial_base}_{args.quote_asset}{args.initial_quote}_buy{args.buy_price}_spread{args.price_spread}.log"
     )
@@ -23,7 +23,7 @@ def setup_logging(args) -> str:
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(log_filename)
+            logging.FileHandler(log_path)
         ]
     )
     
@@ -32,7 +32,7 @@ def setup_logging(args) -> str:
     args_dict = vars(args)
     for key, value in args_dict.items():
         logging.info(f"  {key}: {value}")
-    return log_filename
+    return log_path
 
 if __name__ == '__main__':
     # Import necessary modules

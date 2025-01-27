@@ -12,7 +12,7 @@ import csv
 from datetime import datetime
 
 class SpotOrderTracker:
-    def __init__(self, client: Spot, pair, args, record_filename):
+    def __init__(self, client: Spot, pair, args, logging_path):
         self.client = client
         self.pair = pair
         self.initial_quote = args.initial_quote
@@ -28,7 +28,9 @@ class SpotOrderTracker:
         os.makedirs(self.records_dir, exist_ok=True)
         
         # Use the same file name format as logger.py but with .csv extension
-        self.record_file = record_filename.split('.')[0] + '.csv'
+        log_filename = logging_path.split('/')[1]
+        record_filename = log_filename[:log_filename.rfind('.')] + '.csv'
+        self.record_file = os.path.join(self.records_dir, record_filename)
         
         # Initialize CSV file with headers
         with open(self.record_file, 'w', newline='') as f:
@@ -49,7 +51,7 @@ class SpotOrderTracker:
             with open(self.record_file, 'a', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    datetime.now().isoformat(),
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                     self.pair.quoteAsset,
                     total_quote,
                     self.pair.baseAsset,
@@ -81,12 +83,15 @@ class SpotOrderTracker:
         return self.client.get_order(symbol=self.pair.symbol, orderId=order_id)
 
     def update_orders(self):
+        has_changes = False  # Track if any changes occurred
+        
         # Check buy orders
         for order_id in list(self.buy_orders.keys()):
             order = self.check_order_status(order_id)
             locked_quote = self.buy_orders[order_id]
             
             if order['status'] == 'FILLED':
+                has_changes = True
                 # qty is base asset amount, price is quote per base
                 filled_base = sum(float(fill['qty']) for fill in order['fills'])
                 assert filled_base == order['origQty'] == order['executedQty']
@@ -102,15 +107,19 @@ class SpotOrderTracker:
             else:
                 # If there were partial fills, add the filled base asset
                 if 'fills' in order:
+                    has_changes = True
                     partial_filled_base = sum(float(fill['qty']) for fill in order['fills'])
                     assert partial_filled_base > 0
                     assert partial_filled_base == order['executedQty']
                     assert order['origQty'] > partial_filled_base
                     self.available_base += partial_filled_base
                 else:
-                    assert order['executedQty'] == 0
+                    if order['executedQty'] == 0:
+                        logging.info(f"Order is weird: {order}")
+                        assert False
 
                 if order['status'] in ['CANCELED', 'EXPIRED', 'TRADE_PREVENTION']:
+                    has_changes = True
                     # Return locked quote for canceled orders
                     if 'fills' in order:
                         filled_quote = sum(float(fill['qty']) * float(fill['price']) for fill in order.get('fills', []))
@@ -121,7 +130,7 @@ class SpotOrderTracker:
                     del self.buy_orders[order_id]
                     logging.info(f"Buy order {order_id} canceled: returned {returned_quote}/{locked_quote} {self.pair.quoteAsset}")
                 else:
-                    assert order['status'] == 'TRADE'
+                    assert order['status'] in ['TRADE', 'NEW']
 
         # Check sell orders
         for order_id in list(self.sell_orders.keys()):
@@ -129,6 +138,7 @@ class SpotOrderTracker:
             locked_base = self.sell_orders[order_id]
             
             if order['status'] == 'FILLED':
+                has_changes = True
                 # qty is base asset amount, price is quote per base
                 sold_base = sum(float(fill['qty']) for fill in order['fills'])
                 assert sold_base == order['origQty'] == order['executedQty']
@@ -139,6 +149,7 @@ class SpotOrderTracker:
             else:
                 # If there were partial fills, add the received quote asset
                 if 'fills' in order:
+                    has_changes = True
                     filled_base = sum(float(fill['qty']) for fill in order['fills'])
                     assert filled_base > 0
                     assert filled_base == order['executedQty']
@@ -149,6 +160,7 @@ class SpotOrderTracker:
                     assert order['executedQty'] == 0
 
                 if order['status'] in ['CANCELED', 'EXPIRED', 'TRADE_PREVENTION']:
+                    has_changes = True
                     # Return locked base for canceled orders
                     if 'fills' in order:
                         returned_base = locked_base - filled_base
@@ -158,18 +170,17 @@ class SpotOrderTracker:
                     del self.sell_orders[order_id]
                     logging.info(f"Sell order {order_id} canceled: returned {returned_base}/{locked_base} {self.pair.baseAsset}")
                 else:
-                    assert order['status'] == 'TRADE'
+                    assert order['status'] in ['TRADE', 'NEW']
 
-        # Log current trading status
-        logging.info(f"Available for trading - {self.pair.quoteAsset}: {self.available_quote}, {self.pair.baseAsset}: {self.available_base}")
-        logging.info(f"Pending orders - Buy: {len(self.buy_orders)}, Sell: {len(self.sell_orders)}")
-        
-        # Record current assets
-        self._record_assets()
+        # Only log status if there were changes
+        if has_changes:
+            logging.info(f"Available for trading - {self.pair.quoteAsset}: {self.available_quote}, {self.pair.baseAsset}: {self.available_base}")
+            logging.info(f"Pending orders - Buy: {len(self.buy_orders)}, Sell: {len(self.sell_orders)}")
+            self._record_assets()  # Only record assets when there are changes
 
 def main():
     args = parse_args()
-    log_filename = setup_logging(args)
+    log_path = setup_logging(args)
     
     client = Spot(api_key=key, api_secret=secret)
     account = Account(client)
@@ -191,7 +202,7 @@ def main():
         client=client,
         pair=pair,
         args=args,
-        record_filename=log_filename
+        logging_path=log_path
     )
 
     retry_count = 0
