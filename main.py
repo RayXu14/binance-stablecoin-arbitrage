@@ -56,8 +56,8 @@ class SpotOrderTracker:
                     total_base,
                     total_quote + total_base
                 ])
-            self._last_total = total_quote
-            logging.info(f"Total assets recorded - Quote: {total_quote} {self.pair.quoteAsset}, Base: {total_base} {self.pair.baseAsset}, Total: {total_quote + total_base}")
+            self._last_total = total_quote + total_base
+            logging.info(f"Total assets recorded - Quote: {total_quote} {self.pair.quoteAsset}, Base: {total_base} {self.pair.baseAsset}, Total: {total_quote + total_base} {self.pair.quoteAsset}")
 
     def add_buy_order(self, order_id: int, quote_amount: float):
         # Check if order_id already exists
