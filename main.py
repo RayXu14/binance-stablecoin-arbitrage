@@ -2,7 +2,6 @@ from binance.spot import Spot
 from binance_api_ks import key, secret
 import time
 import logging
-import math
 from typing import Dict
 from config import parse_args
 from logger import setup_logging
@@ -127,21 +126,14 @@ class SpotOrderTracker:
         logging.info(f"Pending orders - Buy: {len(self.buy_orders)}, Sell: {len(self.sell_orders)}")
 
 def main():
-    # Parse arguments
     args = parse_args()
-
-    # Setup logging
     setup_logging(args)
-
-    # Initialize Binance client
-    client = Spot(key=key, secret=secret)
-
-    # Create trading pair with info from Binance
-    pair = TradingPair(client, f"{args.base_asset}{args.quote_asset}")
-
-    # Verify initial capital against balance
-    account = Account(client)
     
+    client = Spot(api_key=key, api_secret=secret)
+    account = Account(client)
+    pair = TradingPair(client, f"{args.base_asset}{args.quote_asset}")
+    
+    # Verify initial capital against balance
     if not account.verify_balance(pair.quoteAsset, args.initial_quote):
         return
     
