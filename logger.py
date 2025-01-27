@@ -2,7 +2,7 @@ import os
 import logging
 from datetime import datetime
 
-def setup_logging(args) -> None:
+def setup_logging(args) -> str:
     """Setup logging configuration
     
     Args:
@@ -32,6 +32,7 @@ def setup_logging(args) -> None:
     args_dict = vars(args)
     for key, value in args_dict.items():
         logging.info(f"  {key}: {value}")
+    return log_filename
 
 if __name__ == '__main__':
     # Import necessary modules

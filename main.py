@@ -6,19 +6,58 @@ from typing import Dict
 from config import parse_args
 from logger import setup_logging
 from trading_pair import TradingPair
-from binance.spot import Account
+from account import Account
+import os
+import csv
+from datetime import datetime
 
 class SpotOrderTracker:
-    def __init__(self, client: Spot, initial_quote: float, initial_base: float, pair):
+    def __init__(self, client: Spot, pair, args, record_filename):
         self.client = client
         self.pair = pair
-        self.initial_quote = initial_quote
-        self.initial_base = initial_base
-        self.available_quote = initial_quote
-        self.available_base = initial_base
+        self.initial_quote = args.initial_quote
+        self.initial_base = args.initial_base
+        self.available_quote = args.initial_quote
+        self.available_base = args.initial_base
         # Track order IDs and their locked amounts
         self.buy_orders: Dict[int, float] = {}   # order_id -> locked quote amount (e.g. USDT)
         self.sell_orders: Dict[int, float] = {}  # order_id -> locked base amount (e.g. USDC)
+        
+        # Initialize records directory and file
+        self.records_dir = args.records_dir
+        os.makedirs(self.records_dir, exist_ok=True)
+        
+        # Use the same file name format as logger.py but with .csv extension
+        self.record_file = record_filename.split('.')[0] + '.csv'
+        
+        # Initialize CSV file with headers
+        with open(self.record_file, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['timestamp', 'quote_asset', 'quote_amount', 'base_asset', 'base_amount', 'total_quote_amount'])
+        
+        # Record initial state
+        self._record_assets()
+
+    def _record_assets(self):
+        """Record current assets to CSV file if total has changed"""
+        # Calculate total quote amount (including locked in orders)
+        total_quote = self.available_quote + sum(self.buy_orders.values())
+        total_base = self.available_base + sum(self.sell_orders.values())
+
+        # Only record if this is the first record or if the total has changed
+        if not hasattr(self, '_last_total') or abs(total_quote + total_base - self._last_total) > 1e-8:
+            with open(self.record_file, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    datetime.now().isoformat(),
+                    self.pair.quote_asset,
+                    total_quote,
+                    self.pair.base_asset,
+                    total_base,
+                    total_quote + total_base
+                ])
+            self._last_total = total_quote
+            logging.info(f"Total assets recorded - Quote: {total_quote} {self.pair.quote_asset}, Base: {total_base} {self.pair.base_asset}, Total: {total_quote + total_base}")
 
     def add_buy_order(self, order_id: int, quote_amount: float):
         # Check if order_id already exists
@@ -124,10 +163,13 @@ class SpotOrderTracker:
         # Log current trading status
         logging.info(f"Available for trading - {self.pair.quote_asset}: {self.available_quote}, {self.pair.base_asset}: {self.available_base}")
         logging.info(f"Pending orders - Buy: {len(self.buy_orders)}, Sell: {len(self.sell_orders)}")
+        
+        # Record current assets
+        self._record_assets()
 
 def main():
     args = parse_args()
-    setup_logging(args)
+    log_filename = setup_logging(args)
     
     client = Spot(api_key=key, api_secret=secret)
     account = Account(client)
@@ -145,7 +187,12 @@ def main():
     logging.info(f"{pair.baseAsset}: {args.initial_base} <= {account.get_free_balance(pair.baseAsset)}")
 
     # Initialize order tracker
-    tracker = SpotOrderTracker(client, args.initial_quote, args.initial_base, pair)
+    tracker = SpotOrderTracker(
+        client=client,
+        pair=pair,
+        args=args,
+        record_filename=log_filename
+    )
 
     retry_count = 0
     while retry_count < args.max_retry:

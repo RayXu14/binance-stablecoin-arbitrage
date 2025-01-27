@@ -24,5 +24,7 @@ def parse_args():
                        help='Maximum number of retries when error occurs (default: 10)')
     parser.add_argument('--logs_directory', type=str, default="logs",
                        help='Directory for log files (default: "logs")')
+    parser.add_argument('--records_dir', type=str, default="records",
+                       help='Directory for asset records files (default: "records")')
     
     return parser.parse_args() 
