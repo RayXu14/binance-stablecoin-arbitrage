@@ -33,7 +33,7 @@ class SpotOrderTracker:
         # Initialize CSV file with headers
         with open(self.record_file, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['timestamp', 'quote_asset', 'quote_amount', 'base_asset', 'base_amount', 'total_quote_amount'])
+            writer.writerow(['timestamp', 'quoteAsset', 'quoteAmount', 'baseAsset', 'baseAmount', 'totalAmount'])
         
         # Record initial state
         self._record_assets()
@@ -50,14 +50,14 @@ class SpotOrderTracker:
                 writer = csv.writer(f)
                 writer.writerow([
                     datetime.now().isoformat(),
-                    self.pair.quote_asset,
+                    self.pair.quoteAsset,
                     total_quote,
-                    self.pair.base_asset,
+                    self.pair.baseAsset,
                     total_base,
                     total_quote + total_base
                 ])
             self._last_total = total_quote
-            logging.info(f"Total assets recorded - Quote: {total_quote} {self.pair.quote_asset}, Base: {total_base} {self.pair.base_asset}, Total: {total_quote + total_base}")
+            logging.info(f"Total assets recorded - Quote: {total_quote} {self.pair.quoteAsset}, Base: {total_base} {self.pair.baseAsset}, Total: {total_quote + total_base}")
 
     def add_buy_order(self, order_id: int, quote_amount: float):
         # Check if order_id already exists
@@ -66,7 +66,7 @@ class SpotOrderTracker:
             
         self.buy_orders[order_id] = quote_amount
         self.available_quote -= quote_amount
-        logging.info(f"Added buy order {order_id}, locked {quote_amount} {self.pair.quote_asset}, available {self.pair.quote_asset}: {self.available_quote}")
+        logging.info(f"Added buy order {order_id}, locked {quote_amount} {self.pair.quoteAsset}, available {self.pair.quoteAsset}: {self.available_quote}")
 
     def add_sell_order(self, order_id: int, base_amount: float):
         # Check if order_id already exists
@@ -75,7 +75,7 @@ class SpotOrderTracker:
             
         self.sell_orders[order_id] = base_amount
         self.available_base -= base_amount
-        logging.info(f"Added sell order {order_id}, locked {base_amount} {self.pair.base_asset}, available {self.pair.base_asset}: {self.available_base}")
+        logging.info(f"Added sell order {order_id}, locked {base_amount} {self.pair.baseAsset}, available {self.pair.baseAsset}: {self.available_base}")
 
     def check_order_status(self, order_id: int) -> Dict:
         return self.client.get_order(symbol=self.pair.symbol, orderId=order_id)
@@ -96,9 +96,9 @@ class SpotOrderTracker:
                 if used_quote < locked_quote:
                     returned_quote = locked_quote - used_quote
                     self.available_quote += returned_quote
-                    logging.info(f"Buy order {order_id} saved {returned_quote} {self.pair.quote_asset} by filling at better price")
+                    logging.info(f"Buy order {order_id} saved {returned_quote} {self.pair.quoteAsset} by filling at better price")
                 del self.buy_orders[order_id]
-                logging.info(f"Buy order {order_id} filled: +{filled_base} {self.pair.base_asset} (used {used_quote}/{locked_quote} {self.pair.quote_asset}), avg price: {used_quote/filled_base}")
+                logging.info(f"Buy order {order_id} filled: +{filled_base} {self.pair.baseAsset} (used {used_quote}/{locked_quote} {self.pair.quoteAsset}), avg price: {used_quote/filled_base}")
             else:
                 # If there were partial fills, add the filled base asset
                 if 'fills' in order:
@@ -119,7 +119,7 @@ class SpotOrderTracker:
                         returned_quote = locked_quote
                     self.available_quote += returned_quote
                     del self.buy_orders[order_id]
-                    logging.info(f"Buy order {order_id} canceled: returned {returned_quote}/{locked_quote} {self.pair.quote_asset}")
+                    logging.info(f"Buy order {order_id} canceled: returned {returned_quote}/{locked_quote} {self.pair.quoteAsset}")
                 else:
                     assert order['status'] == 'TRADE'
 
@@ -135,7 +135,7 @@ class SpotOrderTracker:
                 received_quote = sum(float(fill['qty']) * float(fill['price']) for fill in order['fills'])
                 self.available_quote += received_quote
                 del self.sell_orders[order_id]
-                logging.info(f"Sell order {order_id} filled: -{sold_base}/{locked_base} {self.pair.base_asset} (received {received_quote} {self.pair.quote_asset}), avg price: {received_quote/sold_base}")
+                logging.info(f"Sell order {order_id} filled: -{sold_base}/{locked_base} {self.pair.baseAsset} (received {received_quote} {self.pair.quoteAsset}), avg price: {received_quote/sold_base}")
             else:
                 # If there were partial fills, add the received quote asset
                 if 'fills' in order:
@@ -156,12 +156,12 @@ class SpotOrderTracker:
                         returned_base = locked_base
                     self.available_base += returned_base
                     del self.sell_orders[order_id]
-                    logging.info(f"Sell order {order_id} canceled: returned {returned_base}/{locked_base} {self.pair.base_asset}")
+                    logging.info(f"Sell order {order_id} canceled: returned {returned_base}/{locked_base} {self.pair.baseAsset}")
                 else:
                     assert order['status'] == 'TRADE'
 
         # Log current trading status
-        logging.info(f"Available for trading - {self.pair.quote_asset}: {self.available_quote}, {self.pair.base_asset}: {self.available_base}")
+        logging.info(f"Available for trading - {self.pair.quoteAsset}: {self.available_quote}, {self.pair.baseAsset}: {self.available_base}")
         logging.info(f"Pending orders - Buy: {len(self.buy_orders)}, Sell: {len(self.sell_orders)}")
         
         # Record current assets
