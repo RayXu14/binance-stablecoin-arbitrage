@@ -15,7 +15,7 @@ def setup_logging(args) -> str:
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     log_filename = os.path.join(
         args.logs_directory, 
-        f"{timestamp}_{args.base_asset}{args.initial_base}_{args.quote_asset}{args.initial_quote}_buy{args.buy_price}_sell{args.sell_price}.log"
+        f"{timestamp}_{args.base_asset}{args.initial_base}_{args.quote_asset}{args.initial_quote}_buy{args.buy_price}_spread{args.price_spread}.log"
     )
     
     # Configure logging to file only
