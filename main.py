@@ -57,7 +57,7 @@ class SpotOrderTracker:
                     total_quote,
                     self.pair.baseAsset,
                     total_base,
-                    total_quote + total_base
+                    total_quote + total_base*self.args.buy_price
                 ])
             self._last_total = total_quote + total_base
             logging.info(f"[Tracker] Total assets recorded - Quote: {total_quote} {self.pair.quoteAsset}, Base: {total_base} {self.pair.baseAsset}, Total: {total_quote + total_base*self.args.buy_price}")
@@ -222,7 +222,7 @@ def main():
                     quantity=quantity,
                     price=sell_price
                 )
-                tracker.add_sell_order(order, quote_to_use)
+                tracker.add_sell_order(order, quantity)
 
             # Reset retry count on successful iteration
             retry_count = 0
