@@ -1,12 +1,25 @@
-# Stablecoin Arbitrage
+# Binance Stablecoin Arbitrage
 
 A Python-based trading bot for stablecoin arbitrage on Binance.
+
+Welcome to share your profit using this bot by commenting [this issue](https://github.com/RayXu14/stablecoin-arbitrage/issues/1).
 
 ## Prerequisites
 
 - Python 3.12 or higher
-- A Binance account with spot trading enabled
 - Binance API Key and Secret with spot trading enabled
+- **Stable network connection**, otherwise you will be very very very painful
+
+### Memory Requirement
+Take Ubuntu 24.04 AMD64 server for example:
+| Number of Instances | Minimum Memory Required |
+|:------------------:|:----------------------:|
+| 1-7                | 500MB                  |
+| 8+                 | 1GB+                   |
+If the memory is not enough, you will get
+```
+binance.error.ClientError: (400, -1021, 'Timestamp for this request is outside of the recvWindow.'....
+```
 
 ## Installation
 
@@ -31,22 +44,16 @@ secret = "your_api_secret"
 
 The bot can be configured using command-line arguments. See available options in `config.py`.
 
-## Usage
+## Example Usage
 
 ```bash
-python main.py --base_asset FDUSD --initial_quote 1000 --buy_price 0.9998
-python main.py --base_asset FDUSD --initial_quote 1000 --buy_price 0.9999
-python main.py --base_asset FDUSD --initial_quote 1000 --buy_price 1.0000
-python main.py --base_asset FDUSD --initial_quote 1000 --buy_price 1.0001
-python main.py --base_asset USDC --initial_quote 1000 --buy_price 0.9998
 python main.py --base_asset USDC --initial_quote 1000 --buy_price 0.9999
-python main.py --base_asset USDC --initial_quote 1000 --buy_price 1.0000
-python main.py --base_asset USDC --initial_quote 1000 --buy_price 1.0001
 ```
 
 ## Logging
 
-Logs are automatically saved in the `logs` directory with timestamps. Each run creates a new log file.
+- Logs are automatically saved in the `logs` directory with timestamps.
+- Asset changing records are saved in `records.csv`.
 
 ## Security Notes
 

@@ -4,3 +4,4 @@ __pycache__
 binance_api_ks.py
 logs
 records
+nohup.out
