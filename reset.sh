@@ -1,1 +1,1 @@
-rm -r logs records
+rm logs/* records/*
