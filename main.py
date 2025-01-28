@@ -15,6 +15,7 @@ class SpotOrderTracker:
     def __init__(self, client: Spot, pair, args, logging_path):
         self.client = client
         self.pair = pair
+        self.args = args
         self.initial_quote = args.initial_quote
         self.initial_base = args.initial_base
         self.available_quote = args.initial_quote
@@ -59,7 +60,7 @@ class SpotOrderTracker:
                     total_quote + total_base
                 ])
             self._last_total = total_quote + total_base
-            logging.info(f"[Tracker] Total assets recorded - Quote: {total_quote} {self.pair.quoteAsset}, Base: {total_base} {self.pair.baseAsset}, Total: {total_quote + total_base} {self.pair.quoteAsset}")
+            logging.info(f"[Tracker] Total assets recorded - Quote: {total_quote} {self.pair.quoteAsset}, Base: {total_base} {self.pair.baseAsset}, Total: {total_quote + total_base*self.args.buy_price}")
 
     def add_buy_order(self, order, quote_amount: float):
         logging.info(f"[Tracker] New buy order: {order}")
