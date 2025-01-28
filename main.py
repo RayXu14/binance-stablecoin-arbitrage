@@ -93,25 +93,27 @@ class SpotOrderTracker:
         for order_id in list(self.buy_orders.keys()):
             order = self.check_order_status(order_id)
             locked_quote = self.buy_orders[order_id]
+            executed_qty = float(order['executedQty'])
+            cummulative_quote_qty = float(order['cummulativeQuoteQty'])
             
             if order['status'] == 'FILLED':
                 has_changes = True
                 # qty is base asset amount, price is quote per base
-                assert order['executedQty'] == order['origQty']
-                self.available_base += order['executedQty']
+                assert executed_qty == float(order['origQty'])
+                self.available_base += executed_qty
                 # Return any excess quote if filled at better price
-                if order['cummulativeQuoteQty'] < locked_quote:
-                    returned_quote = locked_quote - order['cummulativeQuoteQty']
+                if cummulative_quote_qty < locked_quote:
+                    returned_quote = locked_quote - cummulative_quote_qty
                     self.available_quote += returned_quote
                     logging.info(f"[Tracker] Buy order {order_id} saved {returned_quote} {self.pair.quoteAsset} by filling at better price")
                 del self.buy_orders[order_id]
-                logging.info(f"[Tracker] Buy order {order_id} filled: +{order['executedQty']} {self.pair.baseAsset} (used {order['cummulativeQuoteQty']}/{locked_quote} {self.pair.quoteAsset}), avg price: {order['cummulativeQuoteQty']/order['executedQty']}")
+                logging.info(f"[Tracker] Buy order {order_id} filled: +{executed_qty} {self.pair.baseAsset} (used {cummulative_quote_qty}/{locked_quote} {self.pair.quoteAsset}), avg price: {cummulative_quote_qty/executed_qty}")
             elif order['status'] in ['CANCELED', 'EXPIRED', 'TRADE_PREVENTION']:
                 has_changes = True
                 # Return locked quote for canceled orders
-                returned_quote = locked_quote - order['cummulativeQuoteQty']
+                returned_quote = locked_quote - cummulative_quote_qty
                 self.available_quote += returned_quote
-                self.available_base += order['executedQty']
+                self.available_base += executed_qty
                 del self.buy_orders[order_id]
                 logging.info(f"[Tracker] Buy order {order_id} canceled: returned {returned_quote}/{locked_quote} {self.pair.quoteAsset}")
             else:
@@ -123,20 +125,22 @@ class SpotOrderTracker:
         for order_id in list(self.sell_orders.keys()):
             order = self.check_order_status(order_id)
             locked_base = self.sell_orders[order_id]
+            executed_qty = float(order['executedQty'])
+            cummulative_quote_qty = float(order['cummulativeQuoteQty'])
             
             if order['status'] == 'FILLED':
                 has_changes = True
                 # qty is base asset amount, price is quote per base
-                assert order['origQty'] == order['executedQty']
-                self.available_quote += order['cummulativeQuoteQty']
+                assert executed_qty == float(order['origQty'])
+                self.available_quote += cummulative_quote_qty
                 del self.sell_orders[order_id]
-                logging.info(f"[Tracker] Sell order {order_id} filled: -{order['executedQty']}/{locked_base} {self.pair.baseAsset} (received {order['cummulativeQuoteQty']} {self.pair.quoteAsset}), avg price: {order['cummulativeQuoteQty']/order['executedQty']}")
+                logging.info(f"[Tracker] Sell order {order_id} filled: -{executed_qty}/{locked_base} {self.pair.baseAsset} (received {cummulative_quote_qty} {self.pair.quoteAsset}), avg price: {cummulative_quote_qty/executed_qty}")
             elif order['status'] in ['CANCELED', 'EXPIRED', 'TRADE_PREVENTION']:
                 has_changes = True
                 # Return locked base for canceled orders
-                returned_base = locked_base - order['executedQty']
+                returned_base = locked_base - executed_qty
                 self.available_base += returned_base
-                self.available_quote += order['cummulativeQuoteQty']
+                self.available_quote += cummulative_quote_qty
                 del self.sell_orders[order_id]
                 logging.info(f"[Tracker] Sell order {order_id} canceled: returned {returned_base}/{locked_base} {self.pair.baseAsset}")
             else:
