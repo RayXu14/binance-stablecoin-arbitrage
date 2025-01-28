@@ -61,7 +61,9 @@ class SpotOrderTracker:
             self._last_total = total_quote + total_base
             logging.info(f"[Tracker] Total assets recorded - Quote: {total_quote} {self.pair.quoteAsset}, Base: {total_base} {self.pair.baseAsset}, Total: {total_quote + total_base} {self.pair.quoteAsset}")
 
-    def add_buy_order(self, order_id: int, quote_amount: float):
+    def add_buy_order(self, order, quote_amount: float):
+        logging.info(f"[Tracker] New buy order: {order}")
+        order_id = int(order['orderId'])
         # Check if order_id already exists
         if order_id in self.buy_orders or order_id in self.sell_orders:
             raise ValueError(f"Order ID {order_id} already exists")
@@ -70,7 +72,9 @@ class SpotOrderTracker:
         self.available_quote -= quote_amount
         logging.info(f"[Tracker] Added buy order {order_id}, locked {quote_amount} {self.pair.quoteAsset}, available {self.pair.quoteAsset}: {self.available_quote}")
 
-    def add_sell_order(self, order_id: int, base_amount: float):
+    def add_sell_order(self, order, base_amount: float):
+        logging.info(f"[Tracker] New sell order: {order}")
+        order_id = int(order['orderId'])
         # Check if order_id already exists
         if order_id in self.buy_orders or order_id in self.sell_orders:
             raise ValueError(f"Order ID {order_id} already exists")
@@ -93,44 +97,27 @@ class SpotOrderTracker:
             if order['status'] == 'FILLED':
                 has_changes = True
                 # qty is base asset amount, price is quote per base
-                filled_base = sum(float(fill['qty']) for fill in order['fills'])
-                assert filled_base == order['origQty'] == order['executedQty']
-                used_quote = sum(float(fill['qty']) * float(fill['price']) for fill in order['fills'])
-                self.available_base += filled_base
+                assert order['executedQty'] == order['origQty']
+                self.available_base += order['executedQty']
                 # Return any excess quote if filled at better price
-                if used_quote < locked_quote:
-                    returned_quote = locked_quote - used_quote
+                if order['cummulativeQuoteQty'] < locked_quote:
+                    returned_quote = locked_quote - order['cummulativeQuoteQty']
                     self.available_quote += returned_quote
                     logging.info(f"[Tracker] Buy order {order_id} saved {returned_quote} {self.pair.quoteAsset} by filling at better price")
                 del self.buy_orders[order_id]
-                logging.info(f"[Tracker] Buy order {order_id} filled: +{filled_base} {self.pair.baseAsset} (used {used_quote}/{locked_quote} {self.pair.quoteAsset}), avg price: {used_quote/filled_base}")
+                logging.info(f"[Tracker] Buy order {order_id} filled: +{order['executedQty']} {self.pair.baseAsset} (used {order['cummulativeQuoteQty']}/{locked_quote} {self.pair.quoteAsset}), avg price: {order['cummulativeQuoteQty']/order['executedQty']}")
+            elif order['status'] in ['CANCELED', 'EXPIRED', 'TRADE_PREVENTION']:
+                has_changes = True
+                # Return locked quote for canceled orders
+                returned_quote = locked_quote - order['cummulativeQuoteQty']
+                self.available_quote += returned_quote
+                self.available_base += order['executedQty']
+                del self.buy_orders[order_id]
+                logging.info(f"[Tracker] Buy order {order_id} canceled: returned {returned_quote}/{locked_quote} {self.pair.quoteAsset}")
             else:
-                # If there were partial fills, add the filled base asset
-                if 'fills' in order:
-                    has_changes = True
-                    partial_filled_base = sum(float(fill['qty']) for fill in order['fills'])
-                    assert partial_filled_base > 0
-                    assert partial_filled_base == order['executedQty']
-                    assert order['origQty'] > partial_filled_base
-                    self.available_base += partial_filled_base
-                else:
-                    if order['executedQty'] == 0:
-                        logging.info(f"[Tracker] Order is weird: {order}")
-                        assert False
-
-                if order['status'] in ['CANCELED', 'EXPIRED', 'TRADE_PREVENTION']:
-                    has_changes = True
-                    # Return locked quote for canceled orders
-                    if 'fills' in order:
-                        filled_quote = sum(float(fill['qty']) * float(fill['price']) for fill in order.get('fills', []))
-                        returned_quote = locked_quote - filled_quote
-                    else:
-                        returned_quote = locked_quote
-                    self.available_quote += returned_quote
-                    del self.buy_orders[order_id]
-                    logging.info(f"[Tracker] Buy order {order_id} canceled: returned {returned_quote}/{locked_quote} {self.pair.quoteAsset}")
-                else:
-                    assert order['status'] in ['TRADE', 'NEW']
+                assert order['status'] in ['TRADE', 'NEW']
+                # Skip updating for NEW or TRADE status to avoid repeat updates
+                continue
 
         # Check sell orders
         for order_id in list(self.sell_orders.keys()):
@@ -140,37 +127,22 @@ class SpotOrderTracker:
             if order['status'] == 'FILLED':
                 has_changes = True
                 # qty is base asset amount, price is quote per base
-                sold_base = sum(float(fill['qty']) for fill in order['fills'])
-                assert sold_base == order['origQty'] == order['executedQty']
-                received_quote = sum(float(fill['qty']) * float(fill['price']) for fill in order['fills'])
-                self.available_quote += received_quote
+                assert order['origQty'] == order['executedQty']
+                self.available_quote += order['cummulativeQuoteQty']
                 del self.sell_orders[order_id]
-                logging.info(f"[Tracker] Sell order {order_id} filled: -{sold_base}/{locked_base} {self.pair.baseAsset} (received {received_quote} {self.pair.quoteAsset}), avg price: {received_quote/sold_base}")
+                logging.info(f"[Tracker] Sell order {order_id} filled: -{order['executedQty']}/{locked_base} {self.pair.baseAsset} (received {order['cummulativeQuoteQty']} {self.pair.quoteAsset}), avg price: {order['cummulativeQuoteQty']/order['executedQty']}")
+            elif order['status'] in ['CANCELED', 'EXPIRED', 'TRADE_PREVENTION']:
+                has_changes = True
+                # Return locked base for canceled orders
+                returned_base = locked_base - order['executedQty']
+                self.available_base += returned_base
+                self.available_quote += order['cummulativeQuoteQty']
+                del self.sell_orders[order_id]
+                logging.info(f"[Tracker] Sell order {order_id} canceled: returned {returned_base}/{locked_base} {self.pair.baseAsset}")
             else:
-                # If there were partial fills, add the received quote asset
-                if 'fills' in order:
-                    has_changes = True
-                    filled_base = sum(float(fill['qty']) for fill in order['fills'])
-                    assert filled_base > 0
-                    assert filled_base == order['executedQty']
-                    assert order['origQty'] > filled_base
-                    partial_received_quote = sum(float(fill['qty']) * float(fill['price']) for fill in order['fills'])
-                    self.available_quote += partial_received_quote
-                else:
-                    assert order['executedQty'] == 0
-
-                if order['status'] in ['CANCELED', 'EXPIRED', 'TRADE_PREVENTION']:
-                    has_changes = True
-                    # Return locked base for canceled orders
-                    if 'fills' in order:
-                        returned_base = locked_base - filled_base
-                    else:
-                        returned_base = locked_base
-                    self.available_base += returned_base
-                    del self.sell_orders[order_id]
-                    logging.info(f"[Tracker] Sell order {order_id} canceled: returned {returned_base}/{locked_base} {self.pair.baseAsset}")
-                else:
-                    assert order['status'] in ['TRADE', 'NEW']
+                assert order['status'] in ['TRADE', 'NEW']
+                # Skip updating for NEW or TRADE status to avoid repeat updates
+                continue
 
         # Only log status if there were changes
         if has_changes:
@@ -225,8 +197,7 @@ def main():
                     quantity=quantity,
                     price=args.buy_price
                 )
-                logging.info(f"New buy order: {order}")
-                tracker.add_buy_order(int(order['orderId']), quote_to_use)
+                tracker.add_buy_order(order, quote_to_use)
 
             # First update order status and balances
             tracker.update_orders()
@@ -246,8 +217,7 @@ def main():
                     quantity=quantity,
                     price=sell_price
                 )
-                logging.info(f"New sell order: {order}")
-                tracker.add_sell_order(int(order['orderId']), quantity)
+                tracker.add_sell_order(order, quote_to_use)
 
             # Reset retry count on successful iteration
             retry_count = 0

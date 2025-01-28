@@ -34,16 +34,8 @@ The bot can be configured using command-line arguments. See available options in
 ## Usage
 
 ```bash
-python main.py --base_asset USDC --initial_quote 1000 --buy_price 0.9999
+python main.py --base_asset FDUSD --initial_quote 10 --buy_price 0.9999
 ```
-
-## Project Structure
-
-- `main.py`: Main entry point and trading logic
-- `trading_pair.py`: Trading pair management
-- `account.py`: Account management and balance tracking
-- `config.py`: Configuration and argument parsing
-- `logger.py`: Logging setup and management
 
 ## Logging
 
