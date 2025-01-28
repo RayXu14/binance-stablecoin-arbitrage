@@ -25,7 +25,7 @@ binance.error.ClientError: (400, -1021, 'Timestamp for this request is outside o
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/stablecoin-arbitrage.git
+git clone https://github.com/RayXu14/binance-stablecoin-arbitrage.git
 cd stablecoin-arbitrage
 ```
 
