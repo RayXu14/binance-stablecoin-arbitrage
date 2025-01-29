@@ -58,7 +58,8 @@ python main.py --base_asset USDC --initial_quote 1000 --buy_price 0.9999
 ## Security Notes
 
 - Never commit your API credentials to version control
-- Keep your API keys secure and with minimum required permissions
+- We **assume the commission fee rate is 0.00%**. This is TRUE for Binance USDCUSDT & FDUSDUSDT spot trading pairs, but if not, you should be aware of it. You should be responsible for your own investment.
+- Generally, if you do not put much much money (orders will not be partially filled frequently) in one bot, it requests Binance API 1 times per second when not placing a new order and 2 times in a second when placing a new order,  much less than [the hard limit of Binance API](https://www.binance.com/en/support/faq/frequently-asked-questions-on-api-360004492232) (although there are also some other ambiguous limits like ML limits).
 
 ## Disclaimer
 
