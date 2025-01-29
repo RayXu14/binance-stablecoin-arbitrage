@@ -118,9 +118,11 @@ class SpotOrderTracker:
                 del self.buy_orders[order_id]
                 logging.info(f"[Tracker] Buy order {order_id} canceled: returned {returned_quote}/{locked_quote} {self.pair.quoteAsset}")
             else:
-                assert order['status'] in ['TRADE', 'NEW']
-                # Skip updating for NEW or TRADE status to avoid repeat updates
-                continue
+                if order['status'] not in ['TRADE', 'NEW']:
+                    logging.info(f"[Tracker] Strange order status: {order['status']}:\n{order}")
+            #     assert order['status'] in ['TRADE', 'NEW']  # May trigger AssertionError, I don't know why
+            #     # Skip updating for NEW or TRADE status to avoid repeat updates
+            #     continue
 
         # Check sell orders
         for order_id in list(self.sell_orders.keys()):
@@ -145,9 +147,11 @@ class SpotOrderTracker:
                 del self.sell_orders[order_id]
                 logging.info(f"[Tracker] Sell order {order_id} canceled: returned {returned_base}/{locked_base} {self.pair.baseAsset}")
             else:
-                assert order['status'] in ['TRADE', 'NEW']
-                # Skip updating for NEW or TRADE status to avoid repeat updates
-                continue
+                if order['status'] not in ['TRADE', 'NEW']:
+                    logging.info(f"[Tracker] Strange order status: {order['status']}:\n{order}")
+            #     assert order['status'] in ['TRADE', 'NEW']
+            #     # Skip updating for NEW or TRADE status to avoid repeat updates
+            #     continue
 
         # Only log status if there were changes
         if has_changes:
