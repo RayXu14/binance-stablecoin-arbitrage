@@ -2,11 +2,11 @@
 
 A Python-based trading bot for stablecoin arbitrage on Binance.
 
-Low profit but very very low risk.
+Low profit but very low risk as long as stablecoins are stable.
 
 Welcome to share your profit using this bot by commenting [this issue](https://github.com/RayXu14/stablecoin-arbitrage/issues/1).
 
-Binance referral (get back 20% of your commission fee):
+Binance referral:
 - code: `1052859643`
 - link: https://accounts.binance.com/register?ref=1052859643
 
