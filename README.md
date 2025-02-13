@@ -51,6 +51,10 @@ The bot can be configured using command-line arguments. See available options in
 ```bash
 python main.py --base_asset USDC --initial_quote 1000 --buy_price 0.9999
 ```
+After runing for a period of time, you already have some records, you can analyze the results by running:
+```bash
+python analyze_records.py
+```
 
 ## Logging
 

@@ -1,1 +1,4 @@
 binance-connector
+pandas
+matplotlib
+seaborn
