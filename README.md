@@ -6,6 +6,12 @@ Low profit but very low risk as long as stablecoins are stable.
 
 Welcome to share your profit using this bot in discussions.
 
+> Q: Why not directly use Binance Spot Grid tool?
+>
+> A: 
+> 1. You may be reminded something like "Price difference is too small. Max number of grids to run this strategy is 0" when using Grid Strategy tool, while this trading bot does not have such limitation.
+> 2. This Trading bot supports compound interest.
+
 ## Prerequisites
 
 - Python 3.12 or higher
@@ -28,7 +34,7 @@ binance.error.ClientError: (400, -1021, 'Timestamp for this request is outside o
 1. Clone the repository:
 ```bash
 git clone https://github.com/RayXu14/binance-stablecoin-arbitrage.git
-cd stablecoin-arbitrage
+cd binance-stablecoin-arbitrage
 ```
 
 2. Install dependencies:
@@ -58,13 +64,13 @@ python analyze_records.py
 
 ## Logging
 
-- Logs are automatically saved in the `logs` directory with timestamps.
+- Program logs are automatically saved in the `logs` directory with timestamps for debugging.
 - Asset changing records are saved in `records.csv`.
 
 ## Security Notes
 
 - Never commit your API credentials to version control
-- We **assume the commission fee rate is 0.00%**. This is TRUE for Binance USDCUSDT & FDUSDUSDT spot trading pairs, but if not, you should be aware of it. You should be responsible for your own investment.
+- We **assume the commission fee rate is 0.00%**. This is TRUE for Binance spot trading pairs among USDT, USDC & FDUSD, but if not, you should be aware of it. You should be responsible for your own investment.
 - Generally, if you do not put much much money (orders will not be partially filled frequently) in one bot, it requests Binance API 1 times per second when not placing a new order and 2 times in a second when placing a new order,  much less than [the hard limit of Binance API](https://www.binance.com/en/support/faq/frequently-asked-questions-on-api-360004492232) (although there are also some other ambiguous limits like ML limits).
 
 ## Disclaimer
