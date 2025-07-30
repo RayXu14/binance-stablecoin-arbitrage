@@ -24,6 +24,7 @@ Take Ubuntu 24.04 AMD64 server for example:
 |:------------------:|:----------------------:|
 | 1-7                | 500MB                  |
 | 8+                 | 1GB+                   |
+
 If the memory is not enough, you will get
 ```
 binance.error.ClientError: (400, -1021, 'Timestamp for this request is outside of the recvWindow.'....
